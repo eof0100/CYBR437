@@ -8,6 +8,13 @@
 
 ### Questions
 
+Reminder for self: Most systems C variable size:
+
+char:  1 byte  
+int:   4 bytes  
+float: 4 bytes  
+double:8 bytes  
+
 
 ## Question 1a: Execute the program and explain the output
 

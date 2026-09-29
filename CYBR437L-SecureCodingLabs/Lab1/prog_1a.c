@@ -15,7 +15,7 @@ int main() {
 
 	// Pointer arithmetic
 	// take the memory address that p points to which is c
-	// and add one to ti
+	// and add one to it
 	p = p + 1;
 	printf("Now p is %p\n\n", p);
 
