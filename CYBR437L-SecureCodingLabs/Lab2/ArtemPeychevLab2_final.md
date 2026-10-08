@@ -9,16 +9,21 @@
 
 ## Question 1: What type of file is this, and what kind of security does it have?
 
-It is an ELF 64 bit LSB executable that includes debugging information and is not stripped, meaning its metadata has not been removed and it still contains debugging details such as function names and variable names. The security of the file is NX for no-execute enabled, Position Indepedent Executable is disabled, and has RELRO which protects the memory from being overwritten.
+It is an ELF 64 bit LSB executable that includes debugging information and is not stripped. The checksec output shows that it has Partial RELRO, NX enabled, no stack canary, and no PIE. This means the program has protections enabled, like the NX or no execute and partial relocation. The program does not use PIE or canary protection.
+
+Screenshot below shows I used checksec to check type of security protections the file has enabled. 
 
 **GDB / Linux Command(s):**
 
 ```bash
 file lab2
+file --file=./lab2
 ```
 
 
 ![Question 1 Screenshot](images/1.png)
+![Question 1 Screenshot](images/1_1.png)
+
 
 ---
 
@@ -90,9 +95,13 @@ p argc
 
 ## Question 6: Step twice and display the contents of the constant and two variables in main.
 
+Stepping twice the size was 4, myArray was 0x0 and argc is 1.
+
 **GDB Command(s):**
 
 ```gdb
+next
+next
 print size
 print myArray
 print argc
@@ -170,7 +179,6 @@ print x
 
 ## Question 11: Use the disassemble command in GDB to display the assembly code for the function. What does the output show, and how does it correlate with the C source code?
 
-he disassemble command shows the assembly instructions generated for the printArray() function. The assembly corresponds to the C code by showing instructions for the if statement, the for loop, accessing myArray[x], incrementing x, and calling printf().
 
 
 The disassemble command shows assembly code for printArray() function. The assembly correlates to the C code by showing the instruction set for the if statement, for loop, accessing array at myArray[x], increasing x, and calling printf() statement. 
@@ -212,8 +220,6 @@ info breakpoints
 
 ## Question 13: Without starting over, AKA your current location in a function that is not main, print the memory location of the first variable passed to main.
 
-I used bt to find that main was in frame 1, switched to it using frame 1, and used print &argc to display the memory address of the first parameter passed to main.
-
 Using bt command to find that main was located in frame 1, switched to frame 1, and then used &argc to display the memory address of the first parameter that is passed to main which was 0x7fffffffdaec.
 
 
@@ -234,8 +240,6 @@ print &argc
 
 ## Question 14: Print the information on the current running threads. How many threads are running?
 
-I used info threads to display the active threads, and there was 1 thread running.
-
 Using info threads command displayed active threads of 1 as shown from the screenshot below.
 
 **GDB Command(s):**
@@ -251,13 +255,15 @@ info threads
 
 ## Question 15: Enable the breakpoint for the third function called by main. What is the type, name, and memory location of the variable passed to it?
 
-The var passed to cleanUp() function is myArray. Its type in int** and its memory location is 0x7fffffffdaf0.
+The var passed to cleanUp() function is myArray. Its type is int ** and its memory location is 0x7fffffffdaf0.
 
 
 
 **GDB Command(s):**
 
 ```gdb
+enable 5
+continue
 info args
 ptype myArray
 print myArray
