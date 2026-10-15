@@ -1,11 +1,10 @@
 # CYBR 437 Secure Coding
 
-## Lab 3
+## Lab 3 - PwnDBG
 
 **Name:** Artem Peychev  
-**Institution:** Eastern Washington University  
-**Quarter:** Fall 2026  
-**Due date:** October 14, 2026, at 11:59 pm
+**Assignment:** Lab 3
+**Due date:** October 14, 2026
 
 ---
 
