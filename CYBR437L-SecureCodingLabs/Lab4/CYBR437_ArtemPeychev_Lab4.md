@@ -129,8 +129,15 @@ Create a password pattern that meets these requirements:
 
 <!-- Explain your interpretation of "two digits that repeat." The supplied valid example t3sTingM33! contains repeated 3 digits. Define what you count as punctuation. -->
 
-I created a regular expression pattern that checks for at least ten characters, including at least one uppercase letter, one lowercase letter, one digit, and one punctuation mark. It also checks that the password starts with a lowercase letter or punctuation and does not contain more than three consecutive lowercase letters. Rule #7, I interpreted the rule "two digits that repeat" as pair of two digits such as 8888 or 1313 and not 33 because one of the valud examples that is suppose to pass "t3sTingM33!" contains 33 which are two consecutive digit.
+I created a regular expression pattern that checks for at least ten characters, including at least one uppercase letter, one lowercase letter, one digit, and one punctuation mark. It also checks that the password starts with a lowercase letter or punctuation and does not contain more than three consecutive lowercase letters. Rule #7, I interpreted the rule "two digits that repeat" as pair of two digits such as 1515 or 1313 and not 33 because one of the valid examples that is suppose to pass "t3sTingM33!" contains 33 which are two consecutive digit.
 I tested the five valid and five invalid examples from the instructions in regex101.com and as the screenshot shows the first five valid examples all matched and the other five did not.
+
+#### Regular expression
+
+```python
+regex = r"^(?=.{10,}$)(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!-/:-@\[-`{-~])(?!.*[a-z]{4})(?!.*([0-9]{2}).*\1)[a-z!-/:-@\[-`{-~].*$"
+```
+
 
 ![Password Regex on regex101.com](images/6.png)
 
@@ -142,17 +149,9 @@ Below shows the valid and invalid testing code that I added to cybr437regextesti
 
 ![Password Testing Code](images/password_code.png)
 
-H
+#### Shortcomings
 
-
-#### Regular expression
-
-```python
-regex = r"<answer here>"
-```
-
-
-
+I interpreted “two digits that repeat” as a repeated pair of digits, such as 1212, where 12 appears twice. I allowed repeated individual digits such as 33 because the instructions include t3sTingM33! as a valid example. All five valid and five invalid password tests passed without issues.
 
 
 
@@ -164,179 +163,171 @@ Analyze `task1.c` with cppcheck, flawfinder, splint, and Clang Static Analyzer. 
 
 #### cppcheck
 
-**Command used:**
+**Command:**
 
 ```bash
-<command here>
+cppcheck --enable=all --inconclusive task1.c
 ```
 
-**Output explanation:**
+--enable=all option adds additional checks like portability   
+--inconclusive includes issues that require manual verification by the user  
 
-<!-- Explain the actual findings, affected lines, why they matter, and any parsing/compilation errors that limited the analysis. Add rows as needed. -->
+The tool cppcheck detected around two dozen findings. For example, on line 30 arr[3] accessed at index 5 which is out of bounds. Line 34, unsafe use of gets(). Memory pointed by buf2r1 is freed twice instead of just once. On 43, if memory allocation fails it warns a possible null pointer dereference. Lines 52 and 54 null pointer dereference. Lines 24 and 25 memory is allocated but it was never used. The Active checker reports 119/975 active checks.
 
-| Source line | Tool finding | Explanation of the issue |
-| --- | --- | --- |
-| <answer here> | <answer here> | <answer here> |
-| <answer here> | <answer here> | <answer here> |
+![cppcheck output](images/2_1.png)
 
-<answer here>
-
-![Part 2, Task 1: cppcheck output](images/2_1.png)
+![cppcheck output2](images/2_2.png)
 
 #### flawfinder
 
-**Command used:**
-
-```bash
-<command here>
-```
-
-**Output explanation:**
-
-<!-- Explain the actual findings, affected lines, why they matter, and any parsing/compilation errors that limited the analysis. Add rows as needed. -->
-
-| Source line | Tool finding | Explanation of the issue |
-| --- | --- | --- |
-| <answer here> | <answer here> | <answer here> |
-| <answer here> | <answer here> | <answer here> |
-
-<answer here>
-
-![Part 2, Task 1: flawfinder output](images/2_2.png)
-
-#### splint
+Flawfinder reported six possible issues in task1.c. It flagged gets() on line 34 because it does not limit input and can overflow the buffer. It also flagged printf(buffer) on line 22 because user input is being used as the format string. The character arrays on lines 15 and 48 were flagged because their fixed sizes require careful bounds checking. On line 49, strcpy() copies a string that is too large for the destination buffer. Then, strncpy() on line 43 because it might not add a null terminator and does not check whether the pointers are valid. Unlike cppcheck, Flawfinder did not report the double free or the out of bounds array access so it is beneficial to use more than one tool.
 
 **Command used:**
 
 ```bash
-<command here>
+flawfinder task1.c
 ```
 
-**Output explanation:**
+![Flawfinder output](images/2_3.png)
 
-<!-- Explain the actual findings, affected lines, why they matter, and any parsing/compilation errors that limited the analysis. Add rows as needed. -->
 
-| Source line | Tool finding | Explanation of the issue |
-| --- | --- | --- |
-| <answer here> | <answer here> | <answer here> |
-| <answer here> | <answer here> | <answer here> |
+I ran splint task1.c, which reported ten warnings. It found ignored return values from snprintf and gets, unsafe use of gets, and the format string issue in printf(buffer). It also warned that strncpy receives a pointer that could be null if malloc() fails. Splint detected that buf2R1 is freed twice and that line 52 dereferences a null pointer. On line 54, it reported that a pointer is incorrectly assigned to an integer. It also reported a possible memory leak when that value is overwritten on line 55 and use of ptr after it is freed on line 59.
 
-<answer here>
-
-![Part 2, Task 1: splint output](images/2_3.png)
-
-#### Clang Static Analyzer
 
 **Command used:**
 
+
 ```bash
-<command here>
+splint task1.c
 ```
 
-**Output explanation:**
+![Splint output](images/2_4.png)
 
-<!-- Explain the actual findings, affected lines, why they matter, and any parsing/compilation errors that limited the analysis. Add rows as needed. -->
+My first Clang analysis stopped because gets was undeclared and line 54 assigned the pointer returned by malloc to an integer. I reran it with those errors treated as warnings so the analyzer could continue without changing the supplied code.
 
-| Source line | Tool finding | Explanation of the issue |
-| --- | --- | --- |
-| <answer here> | <answer here> | <answer here> |
-| <answer here> | <answer here> | <answer here> |
 
-<answer here>
+**Command used:**
 
-![Part 2, Task 1: Clang Static Analyzer output](images/2_4.png)
 
-#### Comparative analysis of the four tools
+```bash
+clang --analyze task1.c
+```
 
-| Tool | Main findings | Findings missed or limitations | How its results differed from the other tools |
-| --- | --- | --- | --- |
-| cppcheck | <answer here> | <answer here> | <answer here> |
-| flawfinder | <answer here> | <answer here> | <answer here> |
-| splint | <answer here> | <answer here> | <answer here> |
-| Clang Static Analyzer | <answer here> | <answer here> | <answer here> |
+![Clang output](images/2_5.png)
 
-<!-- Discuss overlapping findings, differences in detection, and whether an error prevented a tool from completing. A tool stopping early does not prove the code has no further issues. -->
 
-<answer here>
+
+Clang then reported one analyzer warning on line 30, saying the second argument passed to printf() was an uninitialized value. That arg is arr[5], which is outside the array’s valid indexes of 0 through 2. This run did not report the other memory problems identified by cppcheck and Splint. Like I said earlier, it is beneficial to use more than one tool.
+
+
+**Command used:**
+
+
+```bash
+clang --analyze -Wno-error=implicit-function-declaration -Wno-error=int-conversion task1.c
+```
+
+![Clang output2](images/2_6.png)
+
+
+
+#### Comparing the four tools
+
+The tools found different problems in the same code. cppcheck identified array bounds errors, a buffer overflow, a double free, and null pointer problems. Flawfinder focused on unsafe functions such as gets(), printf(), and strcpy(), and gave each finding a risk level analysis which was pretty beneficial. Splint reported several of the same issues, along with ignored return values, a possible memory leak, and use of a freed pointer. Clang initially stopped on errors, and after adjusting the command (ignoring the warning given), it reported one warning involving arr[5]. These results showed me why using more than one tool is useful, since no single run reported every issue.
 
 ---
 
-### Task 2: Python Regex Scanner for Vulnerable Functions (25 points)
+### Task 2: Python Regex Scanner for Vulnerable Functions 
 
 Write a Python program that uses regex to detect vulnerable or deprecated function uses in C source files. Run it against `task2.c`. For every occurrence, output a message, its line number, and the line of C code.
 
-**Scanner filename:** `<scanner_filename>.py`
+**Scanner filename:** `regex_vuln_scanner.py`
 
-#### Targeted functions and reasons
-
-<!-- List the actual functions your scanner targets. Add rows as needed. Distinguish inherently unsafe/deprecated functions from functions whose safety depends on their arguments and usage. -->
-
-| Function | Why the scanner flags it |
-| --- | --- |
-| <answer here> | <answer here> |
-| <answer here> | <answer here> |
-| <answer here> | <answer here> |
-
-#### Regex pattern
+#### Regex Vuln Scanner Source Code
 
 ```python
-<answer here>
+import re
+import sys
+
+# unsafe functions to search for and description of why they're not safe
+functions = {
+    "gets": "No limit how much input is read.",
+    "strcpy": "Does not check if the copied text fits.",
+    "strncpy": "Might not put a null character at the end.",
+    "strcat": "Doesn't check if there is room to add more text.",
+    "sprintf": "Doesn't limit how much text it writes.",
+    "vsprintf": "Does not limit how much text it writes.",
+    "scanf": "Can read too much text if %s has no size limit.",
+    "sscanf": "Can read too much text if %s has no size limit.",
+    "fscanf": "Can read too much text if %s has no size limit.",
+    "itoa": "Nonstandard in C and does not take size of buffer.",
+}
+
+# regex matches unsafe func names gets OR strcpy OR strcat etc etc
+pattern = r"\b(gets|strcpy|strncpy|strcat|sprintf|vsprintf|scanf|sscanf|fscanf|itoa)\s*\("
+
+
+def scan_file(filename):
+    # keeps track of line numbers so it is easier to find unsafe code
+    count = 0
+
+    # open filename in read mode
+    with open(filename, "r", encoding="utf-8") as file:
+
+        # read each line + count line nums
+        for line_number, line in enumerate(file, start=1):
+
+            # find every single match, this works even if there is
+            # more than one atch on a single line 
+            for match in re.finditer(pattern, line):
+                name = match.group(1)
+
+                # print out the func, reaosn flagged, and source code
+                print(f"Line {line_number}: {name}")
+                print(f"Warning: {functions[name]}")
+                print(f"Code: {line.strip()}")
+                print()
+
+                count = count + 1
+
+    print(f"Total occurrences found: {count}")
+
+
+# only runs if its not imported as module
+if __name__ == "__main__":
+
+    # make sure a filename was entered right after script name arg position 1
+    if len(sys.argv) != 2:
+        print("Usage: python3 regex_scanner.py task2.c")
+        sys.exit(1)
+
+    # show error cant open, read, or file doesnt exist
+    try:
+        scan_file(sys.argv[1])
+    except (OSError, UnicodeError) as error:
+        print(f"Could not open or read the file: {error}")
+        sys.exit(1)
 ```
 
-#### Scanner source code
 
-<!-- Paste your completed scanner as text. Also submit the actual Python file separately. -->
 
-```python
-<answer here>
-```
 
-#### Detailed explanation of the code
+![Regex Scanner Output](images/regex_scanner_output.png)
 
-<!-- Explain how the program reads the input file, applies the regex, detects every occurrence, tracks line numbers, and reports the matching code. Explain handling of multiple matches on one line if applicable. -->
 
-<answer here>
+#### Explanation of my code
 
-#### Run the scanner against task2.c
+I used re to search with regex and sys to get the filename from the command line as arguments. The functions dictionary stores the function names I want to flag and a short warning for each one. The regular expression uses | means OR to search for any of those names. The \b checks the word boundary so it does not match a name inside a longer word. The \s* allows spaces between name of the function and the opening parenthesis, and the part \( matches those parenthesis.
+The scan_file() function opens the file getting the filename as the second argument (the first argument is the script itself) and reads it one line at a time. I used enumerate() starting at 1 to keep track of the source line numbers, re.finditer() finds every occurrence, including multiple matches on the same line. For each match, group(1) gets the function name, and the program prints the line number, warning, and source code. It also counts the matches and prints the total. The main section checks that a filename was provided and catches errors if the file cannot be opened.
 
-**Command used:**
+#### Explanation of the output
 
-```bash
-<command here>
-```
+I ran my scanner called regex_vuln_scanner.py against task2.c, and it found seven occurrences. It flagged strcat() on lines 57 and 59, gets() on line 85, sprintf() on line 169, itoa() on line 218, vsprintf() on line 234, and scanf() on line 269. Each result includes the function name, a warning explaining why it needs review, its line number, and the source of function.
 
-**Results:**
+#### Limitations
 
-<!-- Record your actual results. Add one row for every reported occurrence, including repeated uses of the same function on different lines. -->
+My scanner searches for specific function names, so it cannot detect every vulnerability since there are many more unsafe functions in C than I have in my dictionary. It does not check argument sizes or determine whether a particular call is safe. Another limitation is the scanner searches text so it can flag something that looks like a function call even though it isn't even executed (part of the print statement). Also, the scanner looks for a function name and paranthesis on the same line, for example gets(bufferIn), but it may miss it if gets is on one liner and (bufferIn) is on another (which is still valid syntax in C)
 
-| Line number | Function | Reported message | Matching source line |
-| --- | --- | --- | --- |
-| <answer here> | <answer here> | <answer here> | `<source line here>` |
-| <answer here> | <answer here> | <answer here> | `<source line here>` |
-| <answer here> | <answer here> | <answer here> | `<source line here>` |
 
-<answer here>
 
-![Part 2, Task 2: Regex scanner command and output](images/2_5.png)
 
-<!-- Add images/2_6.png and more screenshots if required to show the complete output. -->
-
-#### Scanner limitations
-
-<!-- Explain any actual limitations, such as matching text inside comments or strings, missing calls split across lines, or flagging functions without checking argument sizes. Do not claim it is a complete C vulnerability analyzer. -->
-
-<answer here>
-
----
-
-<!-- BEFORE SUBMISSION: Remove this comment after checking the following.
-1. All three Part 1 patterns are included and explained component by component.
-2. Each Part 1 problem has five valid and five invalid inputs, with reasons and actual results.
-3. Regex101 testing, Python test cases, and test output are shown.
-4. Part 1 shortcomings, failures, and interpretations are documented.
-5. All four static analysis tools have commands, actual output screenshots, and explanations.
-6. The four tools are compared.
-7. The Part 2 scanner is explained and its output includes every detected occurrence, line number, and source line.
-8. Replace all placeholders and confirm every image appears in the exported report.
-9. Submit cybr437regex.py, cybr437regextesting.py, your scanner Python file, and the write-up. Follow any additional Canvas upload/format instructions.
--->
