@@ -56,6 +56,20 @@ The final regular expression ended up being below. Then I added the regular expr
 ```python
 regex = r"^(?!000|666)(?!9[0-9]{2}[-\s]?[0-8])(?!([0-9])\1{2}[-\s]?\1{2}[-\s]?\1{4}$)(?!123[-\s]?45[-\s]?6789$)[0-9]{3}[-\s]?(?!00)[0-9]{2}[-\s]?(?!0000)[0-9]{4}$"
 ```
+### How my SSN pattern works
+
+| Pattern part | What it does |
+|---|---|
+| `^` | Starts checking at the beginning of the SSN. |
+| `(?!000|666)` | Rejects SSNs that start with `000` or `666`. |
+| `(?!9[0-9]{2}[-\s]?[0-8])` | If the first group starts with `9`, rejects a second group that starts with a digit from `0` through `8`. |
+| `(?!([0-9])\1{2}[-\s]?\1{2}[-\s]?\1{4}$)` | Rejects SSNs where all nine digits are identical, such as `111-11-1111`. `([0-9])` captures the first digit, and `\1` matches that same digit again. |
+| `(?!123[-\s]?45[-\s]?6789$)` | Rejects `123-45-6789`, including versions with whitespace or no separators. |
+| `[0-9]{3}` | Requires exactly three digits in the first group. |
+| `[-\s]?` | Allows an optional hyphen or one whitespace character between groups. This appears twice in the pattern. |
+| `(?!00)[0-9]{2}` | Requires exactly two digits in the second group and rejects `00`. |
+| `(?!0000)[0-9]{4}` | Requires exactly four digits in the last group and rejects `0000`. |
+| `$` | Marks the end of the SSN. |
 
 ![SSN Test Results](images/ssn_pass.png)
 
@@ -94,6 +108,20 @@ I first came up with a pattern that simply rejects addresses that start with a p
 regex = r"^(?!\.)(?!.*\.\.)[A-Za-z0-9_.-]+(?<!\.)@[A-Za-z0-9_.-]{4,}$"
 ```
 
+### How my email pattern works
+
+| Pattern part | What it does |
+|---|---|
+| `^` | Starts checking at the beginning of the email. |
+| `(?!\.)` | Prevents the email from starting with a period. |
+| `(?!.*\.\.)` | Rejects two consecutive periods anywhere in the email. |
+| `[A-Za-z0-9_.-]+` | Requires one or more letters, digits, underscores, periods, or hyphens before the `@`. |
+| `(?<!\.)` | Prevents the character immediately before the `@` from being a period. |
+| `@` | Requires the literal `@` symbol. |
+| `[A-Za-z0-9_.-]{4,}` | Requires at least four characters after the `@`, using letters, digits, underscores, periods, or hyphens. |
+| `$` | Marks the end of the email. |
+
+
 ![Regex Email Pattern](images/5.png)
 
 Once I added the regular expression to cybr437regex.py, then I added valid and invalid test cases to cybr437regextesting.py and passed all 11 tests.  
@@ -127,7 +155,6 @@ Create a password pattern that meets these requirements:
 7. The handout states that the password must not contain "two digits that repeat."
 8. The first character must be a lowercase letter or a punctuation mark.
 
-<!-- Explain your interpretation of "two digits that repeat." The supplied valid example t3sTingM33! contains repeated 3 digits. Define what you count as punctuation. -->
 
 I created a regular expression pattern that checks for at least ten characters, including at least one uppercase letter, one lowercase letter, one digit, and one punctuation mark. It also checks that the password starts with a lowercase letter or punctuation and does not contain more than three consecutive lowercase letters. Rule #7, I interpreted the rule "two digits that repeat" as pair of two digits such as 1515 or 1313 and not 33 because one of the valid examples that is suppose to pass "t3sTingM33!" contains 33 which are two consecutive digit.
 I tested the five valid and five invalid examples from the instructions in regex101.com and as the screenshot shows the first five valid examples all matched and the other five did not.
@@ -137,6 +164,20 @@ I tested the five valid and five invalid examples from the instructions in regex
 ```python
 regex = r"^(?=.{10,}$)(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!-/:-@\[-`{-~])(?!.*[a-z]{4})(?!.*([0-9]{2}).*\1)[a-z!-/:-@\[-`{-~].*$"
 ```
+
+
+| Pattern part | What it does |
+|---|---|
+| `^` | Starts checking at the beginning of the password. |
+| `(?=.{10,}$)` | Checks that the password has at least ten characters. |
+| `(?=.*[A-Z])` | Requires at least one uppercase letter. |
+| `(?=.*[a-z])` | Requires at least one lowercase letter. |
+| `(?=.*[0-9])` | Requires at least one digit. |
+| `` (?=.*[!-/:-@\[-`{-~]) `` | Requires at least one ASCII punctuation mark. |
+| `(?!.*[a-z]{4})` | Rejects four consecutive lowercase letters, so no more than three are allowed together. |
+| `(?!.*([0-9]{2}).*\1)` | Captures a pair of digits and rejects the password if that same pair appears again later. `\1` refers to the captured pair. |
+| `` [a-z!-/:-@\[-`{-~] `` | Requires the first character to be a lowercase letter or punctuation mark. |
+| `.*$` | Matches the remaining characters through the end of the password. |
 
 
 ![Password Regex on regex101.com](images/6.png)
