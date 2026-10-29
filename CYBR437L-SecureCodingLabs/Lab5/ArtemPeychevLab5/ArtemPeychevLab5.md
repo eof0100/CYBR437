@@ -1,178 +1,190 @@
 Artem Peychev  
 CYBR437 Secure Coding  
-Lab 5 Assembly Code 
-
-
+Lab 5
 
 # Part 1: Assembly to C
 
-I compiled these three programs with no optimization so I could compare the instructions. The build for Part 1 matches the handout without a stack canary. All Part 3 programs are compiled separately with stack protection enabled.
+I used no optimization when compiling so I could compare the assembly with the handout. Part 1 uses the same setup without a stack canary as the examples. Part 3 was compiled separately with stack protection turned on.
 
 ## Task 1
 
-### C code
+### Code
 
 ```c
-/* Part 1, Task 1: Convert the supplied main function back to C. */
 int main(void) {
-    int a = 25;       /* movl $0x19,-0x4(%rbp): 0x19 is 25. */
-    int b = 30;       /* movl $0x1e,-0x8(%rbp): 0x1e is 30. */
-    long c = 45;      /* movq $0x2d,-0x10(%rbp): 8 byte long, value 45. */
+    // First movl puts 25 in a.
+    int a = 25;
+    // Next movl puts 30 in b.
+    int b = 30;
+    // movq puts 45 in c. Long uses 8 bytes on this system.
+    long c = 45;
 
-    /* Load a into edx and b into eax. add computes a+b as an int.
-       cltq extends the int result from eax to the 64 bit rax register.
-       sub subtracts the old c from rax. mov saves the result in c. */
+    // add adds a and b. cltq makes the result 64 bits.
+    // sub takes away the old c, then mov saves the result in c.
     c = a + b - c;
-    return 0;         /* mov $0x0,%eax puts the return value in eax. */
+    // The last mov puts 0 in eax for the return value.
+    return 0;
 }
 ```
 
-### How the assembly matches my code
+### What it does
 
-The first `movl` stores `0x19`, which is 25, in `a` at `rbp-4`. The next `movl` stores `0x1e`, which is 30, in `b` at `rbp-8`. The `movq` stores `0x2d`, which is 45, in `c` at `rbp-16`. The `l` instructions store 4 bytes, while the `q` instruction stores 8 bytes. On this Linux x86 64 system, `int` is 4 bytes and `long` is 8 bytes.
+First movl stores 25 in a. In the assembly this number is 0x19. It goes at rbp minus 4. The next movl stores 30 in b which is 0x1e, at rbp minus 8. Then movq stores 45 in c which is 0x2d, at rbp minus 16.
 
-The next two `mov` instructions load `a` into `edx` and `b` into `eax`. The `add %edx,%eax` adds them, giving 55. The `cltq` changes the signed 32 bit result into a signed 64 bit result. The `sub -0x10(%rbp),%rax` subtracts the old value of `c`, giving 10. Then `mov %rax,-0x10(%rbp)` stores 10 back in `c`. This matches `c = a + b - c;`.
+I used int for a and b because movl stores 4 bytes. I used long for c because movq stores 8 bytes and long has that size on this system.
 
-The final `mov $0x0,%eax` matches `return 0;`. The `push`, frame setup, `pop`, and `ret` instructions handle entering and leaving the function. The `endbr64` instruction is part of control flow protection.
+Then mov loads a into edx and b into eax. The add instruction adds them so now the result is 55. Next cltq takes the signed 32 bit result in eax and makes it a signed 64 bit result in rax. This lets it work with the long variable.
 
-### Assembly comparison
+The sub instruction takes away the old c value of 45. So 55 minus 45 gives 10. The next mov saves 10 back in c. This is what the line c equals a plus b minus c does.
 
-![Task 1 compiled main function.](images/1.png)
+The last mov puts 0 in eax for return 0. Push saves the old rbp and mov sets up the new stack frame. Pop restores rbp and ret returns from the function. Endbr64 is a protection instruction for jumps into the function.
 
-My comparison with the handout: **[Write what matched in your actual output. Addresses can differ.]**
+### Screenshot
+
+![Assembly for task 1](images/1.png)
+
+The assembly has the same numbers, stack positions, add, cltq and sub as the handout. It also saves the result back in c.
 
 ## Task 2
 
-### C code
+### Code
 
 ```c
-/* Part 1, Task 2: Convert the comparison and jumps back to C. */
 int main(void) {
-    int a = 25;       /* movl $0x19,-0x4(%rbp) */
-    int b = 30;       /* movl $0x1e,-0x8(%rbp) */
+    // The first two movl instructions store these numbers.
+    int a = 25;
+    int b = 30;
     int result;
 
-    /* mov loads a into eax. cmp compares a with b.
-       jle goes to the else branch when a <= b.
-       Otherwise movl $0x1 stores 1 in result.
-       jmp skips over the else branch afterward. */
+    // mov loads a, then cmp compares a with b.
+    // jle goes to the else part if a is less than or equal to b.
     if (a > b) {
+        // movl stores 1 here, then jmp skips the else part.
         result = 1;
     } else {
-        result = 0;  /* movl $0x0,-0xc(%rbp) */
+        // This is where jle goes. movl stores 0.
+        result = 0;
     }
-    return 0;        /* mov $0x0,%eax */
+    // Put 0 in eax and finish main.
+    return 0;
 }
 ```
 
-### How the assembly matches my code
+### What it does
 
-The two `movl` instructions store 25 and 30 in the first two local variables. The next `mov` loads the first number into `eax`. The `cmp -0x8(%rbp),%eax` compares that first number with the second number.
+The first two movl instructions store 25 and 30 in a and b. They use the stack positions rbp minus 4 and rbp minus 8. Then mov loads a into eax and cmp compares it with b.
 
-The `jle` jumps to the branch that stores 0 when the first number is less than or equal to the second number. If the jump does not happen, the next instruction stores 1 in the third local variable at `rbp-12`. The `jmp` then skips the branch that stores 0. This matches my `if (a > b)` and `else` statements. With 25 and 30, `result` becomes 0.
+Jle means jump if less than or equal. So if a is less than or equal to b it goes to the part that stores 0 in result. Result is at rbp minus 12.
 
-The final `mov $0x0,%eax` is the return value of `main`. The function setup and ending instructions handle its stack frame, and `endbr64` is for control flow protection.
+If a is bigger than b it does not take that jump. It stores 1 in result instead. Then jmp skips the part that stores 0. So this is an if and else in C. For these numbers 25 is smaller than 30, so result becomes 0.
 
-### Assembly comparison
+The last mov puts 0 in eax because main returns 0. Push, mov, pop and ret handle starting and ending the function. Endbr64 is there for control flow protection.
 
-![Task 2 compiled main function.](images/2.png)
+### Screenshot
 
-My comparison with the handout: **[Write what matched in your actual output.]**
+![Assembly for task 2](images/2.png)
+
+The assembly has the same cmp, jle and jmp instructions as the handout. It also has the two choices that store either 1 or 0.
 
 ## Task 3
 
-### C code
+### Code
 
 ```c
-/* Part 1, Task 3: Convert both fun and main back to C. */
 int fun(int a, int b) {
-    /* edi and esi hold the two integer arguments.
-       mov saves them at rbp-4 and rbp-8, then loads a into edx
-       and b into eax. add computes a+b; sub $0x1 subtracts 1.
-       eax holds the value that ret returns to the caller. */
+
+    // edi and esi bring the two numbers into this function.
+    // mov saves them on the stack, then loads a into edx and b into eax.
+    // add adds them, then sub takes away 1.
+    // eax holds the number that goes back to main.
     return a + b - 1;
 }
 
 int main(void) {
-    int a = 5;       /* movl $0x5,-0x4(%rbp) */
-    int b = 6;       /* movl $0x6,-0x8(%rbp) */
-    /* mov puts b into esi and a into edi before call fun.
-       After the call, mov %eax,-0x4(%rbp) saves the result in a. */
+    // The two movl instructions store 5 and 6.
+    int a = 5;
+    int b = 6;
+
+    // mov puts a in edi and b in esi, then call runs fun.
+    // After fun returns, mov saves the number from eax in a.
     a = fun(a, b);
-    return 0;        /* mov $0x0,%eax */
+    // Main returns 0.
+    return 0;
 }
 ```
 
-### How the assembly matches my code
+### What it does
 
-In `main`, `sub $0x10,%rsp` makes room on the stack. The two `movl` instructions store 5 and 6 in the local variables. The next instructions load 6 into `edx` and 5 into `eax`. They then copy these values into `esi` and `edi`. On this system, `edi` holds the first integer argument and `esi` holds the second one. This prepares the call `fun(a, b)`.
+In main, sub takes 16 bytes from rsp to make room on the stack. The two movl instructions store 5 in a and 6 in b. Then mov loads b into edx and a into eax. The next two mov instructions put b in esi and a in edi. These registers hold the numbers being passed to fun.
 
-In `fun`, the first two `mov` instructions save those arguments in local stack positions. The next two load the first argument into `edx` and the second into `eax`. The `add` adds them together, and `sub $0x1,%eax` subtracts 1. This matches `return a + b - 1;`, giving 10. The return value is left in `eax`.
+The call instruction runs fun. Inside fun, mov saves the first number from edi at rbp minus 4 and the second number from esi at rbp minus 8. It loads a into edx and b into eax. Then add adds the numbers and sub takes away 1.
 
-Back in `main`, `mov %eax,-0x4(%rbp)` stores that returned value in `a`. The next `mov` sets the return value of `main` to 0. The setup and ending instructions manage the stack frame. The `leave` instruction restores the frame before `ret` returns.
+So fun does 5 plus 6 minus 1 and returns 10. It leaves this result in eax. Back in main, mov saves that result in a at rbp minus 4.
 
-### Assembly comparison
+The next mov puts 0 in eax because main returns 0. Leave restores the stack frame and ret goes back to the caller. The push and mov at the start set up the frame, and endbr64 is for control flow protection.
 
-![Task 3 compiled main and fun functions.](images/3.png)
+### Screenshot
 
-My comparison with the handout: **[Write what matched in your actual output.]**
+![Assembly for main and fun](images/3.png)
+
+The screenshot shows main passing the numbers to fun, then storing its result. Fun has the same add and subtract 1 instructions as the handout.
 
 # Part 2: Memory management
 
-
+I looked at these two tasks without running the code.
 
 ## Task 1
 
-The function uses malloc to allocate 32 bytes but never frees that memory.
-When the function ends it loses the pointer to that memory causing a memory leak.
+The function uses malloc to get 32 bytes but never frees that memory. When the function ends it loses the pointer, so this causes a memory leak.
 
-To fix I would add a line to free the text vuffer before it returns a 0.
+To fix it I would free text_buffer before return 0. There is already a NULL check, so if malloc fails it returns negative 1 without using the pointer.
 
 ## Task 2
 
-The second printf uses a pointer after its memory has been already freed.
-It is using the memory hafter it has been freed even if it prints 10 that memory no longer is safe to access.
+The second printf uses ptr after the memory was already freed. This is called use after free. Even if it prints 10 the memory is no longer safe to use.
 
-To fix this ussie I would remove the second printf or move it right before
-the free(ptr) line and would check if malloc returned NULL before using a pointer.
+To fix this I would remove the second printf or move it before free. I would also check if malloc returned NULL before putting 10 into the memory that ptr points to.
 
-
+I could set ptr to NULL after freeing it so it does not keep the old address. But setting it to NULL still does not make it safe to read through that pointer.
 
 # Part 3: Buffer overflows
 
-I compiled the Part 3 programs with `-fstack-protector-all`. I also used AddressSanitizer for the array copying task to detect the write outside the array. I did not disable the stack canary.
+I kept stack protection on for these programs. I also used AddressSanitizer for the array copy so it could show where the program writes outside the array.
 
 ## Task 1: City input
 
-### Vulnerable code
+### Original code
 
 ```c
-/* Part 3, Task 1: Original vulnerable code from the assignment. */
 #include <stdio.h>
 int main(void) {
+    // Only 10 bytes are available here.
     char city[10];
     printf("Enter city: ");
-    /* No width limit: a long word writes beyond the 10 byte array. */
+
+    // This keeps reading even when the input will not fit.
     scanf("%s", city);
     printf("City: %s\n", city);
     return 0;
 }
 ```
 
-### Problem and test
+### What is wrong
 
-`city` has room for 10 bytes. A C string also needs a final null byte, so only 9 characters fit. The `%s` conversion has no length limit, so a longer word can write outside the array.
+City only has 10 bytes. It needs one of those bytes for the zero at the end of the string, so only 9 characters fit. Scanf has no limit on how many characters it reads here. So a long name goes past the end of the array.
 
-I used `normal_city.txt`, containing `Spokane`, and `long_city.txt`, containing an 80 character word. Both files end with a newline.
+I used normal_city.txt with Spokane and long_city.txt with a much longer name. I used these same files for both versions.
 
-![Original city program with short and long input.](images/4.png)
+### Before the fix
 
-The short city printed correctly but the long inputt caused stack smashing detected error and the program stopped. The input was too long for 10 byte city array because scanf did not limit the chars it read.
+![City before the fix](images/4.png)
 
-### Corrected code
+The short city printed correctly. The long input caused a stack smashing detected error and the program stopped. It was too long for the city array.
+
+### Fixed code
 
 ```c
-/* Part 3, Task 1: Read the full city instead of rejecting long names. */
+// Makes getline available on this Linux system.
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
@@ -182,56 +194,63 @@ int main(void) {
     char *city = NULL;
     size_t capacity = 0;
     printf("Enter city: ");
-    /* On Linux, getline allocates space and grows it when needed.
-       The return value includes the newline but not the final null byte. */
+
+    // getline makes space and adds more when needed.
     ssize_t length = getline(&city, &capacity, stdin);
+    // Stop if the input could not be read.
     if (length < 0) {
         fprintf(stderr, "Could not read city.\n");
         free(city);
         return 1;
     }
+    // Remove the Enter key newline at the end of the input.
     if (length > 0 && city[length - 1] == '\n') {
         city[length - 1] = '\0';
     }
     printf("City: %s\n", city);
-    free(city); /* Release the memory that getline allocated. */
+    // Free the memory after printing the city.
+    free(city);
     return 0;
 }
 ```
 
-### Why the fix works
+### What I changed
 
-I replaced the fixed array and unbounded scan with `getline`. It allocates memory and grows the buffer when more space is needed. This lets the program read the whole city, including long names, instead of rejecting the input or cutting it short. I also remove the input newline and free the allocated memory when finished.
+I used getline instead of the small city array and scanf. Getline makes space for the input and adds more space if it needs it. So the whole name fits even if it is long, and the program does not have to reject it.
 
-I tested the corrected program with the same two input files.
+I also remove the newline at the end and free the memory after printing. If getline cannot read the input the program frees any allocated memory and stops.
 
-![Corrected city program with the same short and long input.](images/5.png)
+### After the fix
 
-Both short and long city names printed without crashing this time. The fixed program uses the getline which allows the growing of the buffer when more space is needed so the entire output will fit.
+![City after the fix](images/5.png)
+
+Both short and long city names printed this time without crashing. The buffer could grow so the whole input fit.
 
 ## Task 2: Copying an array
 
-### Vulnerable code and test main
+### Original code
 
 ```c
-/* Part 3, Task 2: Original function with a main that tests its bounds. */
 #include <stdio.h>
 
 int fun(double *to, double *from, int pos, int n) {
     int k;
     for (k = 0; k < n; k++) {
-        to[pos] = from[k]; /* No check of the destination capacity. */
+        // This does not check if the next value will fit.
+        to[pos] = from[k];
         pos++;
     }
     return pos;
 }
 
 int main(void) {
+    // Destination has 5 spaces and source has 6 numbers.
     double to[5] = {0};
     double from[6] = {10, 20, 30, 40, 50, 60};
     printf("Destination capacity: 5; start: 3; number to copy: 4\n");
     printf("This tries to write destination indexes 3, 4, 5, and 6.\n");
     fflush(stdout);
+    // Copy 4 numbers starting at index 3. This goes past the end.
     int end = fun(to, from, 3, 4);
     printf("Returned position: %d\n", end);
     for (int k = 0; k < 5; k++) printf("%.0f ", to[k]);
@@ -240,42 +259,49 @@ int main(void) {
 }
 ```
 
-### Problem and test
+### What is wrong
 
-The function never checks how much space the destination has. My test destination has 5 elements, with valid indexes 0 through 4. Starting at position 3 and copying 4 values tries to write indexes 3, 4, 5, and 6. Indexes 5 and 6 are outside the destination. The source has 6 elements, which is more than the 4 being copied, as required.
+The function does not know how much space the destination has. My destination has 5 elements, so its indexes go from 0 to 4. I tried copying 4 values starting at index 3. That tries to write at indexes 3, 4, 5 and 6, but 5 and 6 are outside the array.
 
-![Original copying function and its detected overflow.](images/6.png)
+The source has 6 elements which is more than the 4 being copied, so the source is large enough for this test.
 
-The address sanitizer detected a write outside the destination array and only indexes 0 to 4 but it is actually copying four values starting with index 3 trying to write at index 5 and 6 so the program stopped when the overflow was detected.
+### Before the fix
 
-### Corrected code and test main
+![Array copy before the fix](images/6.png)
+
+AddressSanitizer found a write outside the destination array. It points to line 7 in fun where the value is copied. The program stopped when the overflow was found.
+
+### Fixed code
 
 ```c
-/* Part 3, Task 2: Grow the destination so all requested items fit. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <stdint.h>
 
-/* to points to the caller's array pointer, so realloc can update it.
-   capacity records the number of doubles currently allocated.
-   from contains at least n elements, as the assignment assumes. */
+// Passing the pointer by address lets this function update it.
+// Capacity tells us how many numbers fit in the destination.
 int fun(double **to, const double *from, int pos, int n, size_t *capacity) {
-    /* Prevent invalid indexes and overflow while calculating the size.
-       A valid request that exceeds capacity is handled by growing the array. */
+
+    // Check the positions and make sure adding the sizes will fit.
     if (pos < 0 || n < 0 || n > INT_MAX - pos) return -1;
     size_t needed = (size_t)pos + (size_t)n;
+    // Make sure the size in bytes will fit too.
     if (needed > SIZE_MAX / sizeof(double)) return -1;
 
+    // Make more room if the current array is too small.
     if (needed > *capacity) {
-        /* Use a temporary pointer so an allocation failure does not
-           lose the original array. */
+
+        // Keep the old pointer in case realloc fails.
         double *larger = realloc(*to, needed * sizeof(double));
         if (larger == NULL) return -1;
+        // Set the new spaces to zero.
         for (size_t k = *capacity; k < needed; k++) larger[k] = 0;
+        // Give the updated pointer and size back to main.
         *to = larger;
         *capacity = needed;
     }
+    // Now all the numbers fit, so copy them.
     for (int k = 0; k < n; k++) {
         (*to)[pos] = from[k];
         pos++;
@@ -285,10 +311,12 @@ int fun(double **to, const double *from, int pos, int n, size_t *capacity) {
 
 int main(void) {
     size_t capacity = 5;
+    // Use allocated memory so realloc can grow it later.
     double *to = calloc(capacity, sizeof(double));
     double from[6] = {10, 20, 30, 40, 50, 60};
     if (to == NULL) return 1;
     printf("Original capacity: %zu; start: 3; number to copy: 4\n", capacity);
+    // Use the same starting position and copy count as before.
     int end = fun(&to, from, 3, 4, &capacity);
     if (end < 0) {
         fprintf(stderr, "Could not complete the copy.\n");
@@ -299,153 +327,174 @@ int main(void) {
     printf("Destination: ");
     for (size_t k = 0; k < capacity; k++) printf("%.0f ", to[k]);
     printf("\n");
+    // Free the array when finished.
     free(to);
     return 0;
 }
 ```
 
-### Why the fix works
+### What I changed
 
-I changed the function so it knows the destination capacity and can grow the destination with `realloc`. I also changed the destination in `main` to allocated memory, because a stack array cannot be resized with `realloc`.
+I changed the function so it knows how many elements fit in the destination. If there is not enough room it uses realloc to grow the array. So it can copy all the values instead of rejecting the input.
 
-The destination pointer is passed by address because `realloc` can move the array. The function checks the size calculation before allocating memory. When the request needs more space, it grows the destination instead of just rejecting the copy. It uses a temporary pointer so the old allocation is not lost if `realloc` fails.
+I used calloc in main because realloc needs allocated memory. It cannot grow the original stack array. I pass the pointer by address so the function can update it if realloc moves the array.
 
-I used the same source, starting position 3, copy count 4, and original destination capacity 5. The corrected function should grow the destination to 7 elements and return position 7. The destination should contain `0 0 0 10 20 30 40`.
+Before making more room I check that the positions are not negative and that the size calculation will fit. I also check the size in bytes. I use a temporary pointer for realloc so I do not lose the old memory if it fails. If there is no memory available the function returns an error. At the end main frees the array.
 
-![Corrected copying function using the same test values.](images/7.png)
+I used the same 6 source values, starting index 3, copy count 4 and original destination size 5 for this test.
 
-Fixed program increases the array size from 5 to correct size of 7 and copied all four values returning to position number 7.
+### After the fix
+
+![Array copy after the fix](images/7.png)
+
+The fixed program increased the array size from 5 to 7. It copied all four values and returned position 7. The array had 0 0 0 10 20 30 40 and there was no overflow error.
 
 # Part 4: Integer overflows
 
-I used `INT_MIN` and `INT_MAX` from `limits.h` instead of writing system specific limits as constants. I used UndefinedBehaviorSanitizer to report signed overflow in the original functions. Signed overflow is undefined behavior in C, so a wrapped result is not guaranteed.
+I used INT_MIN and INT_MAX from limits.h to get the smallest and biggest int values for this system. I did not write those limit values into the code myself.
+
+I used UndefinedBehaviorSanitizer to check for overflow in the original functions. Signed overflow is undefined in C, so I cannot rely on it just wrapping around to another number.
 
 ## Task 1: Addition
 
-### Source code
+### Code
 
 ```c
-/* Part 4, Task 1: Run with "unsafe" to demonstrate the original bug.
-   Run with no argument to test the corrected function. */
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
 
 void fun1(int a, int b) {
     int sum;
-    sum = a + b; /* Original code: signed overflow is undefined behavior. */
+    // Original function adds the numbers without checking.
+    sum = a + b;
     printf("Result = %d\n", sum);
 }
 
 void fun1_fixed(int a, int b) {
     printf("a = %d, b = %d: ", a, b);
-    /* For positive b, check the upper limit before adding.
-       For negative b, check the lower limit before adding.
-       The checks themselves stay within the int range. */
+
+    // Positive b can make the sum too big.
+    // Negative b can make it too small. Check before adding.
     if ((b > 0 && a > INT_MAX - b) ||
         (b < 0 && a < INT_MIN - b)) {
         printf("Error: integer overflow.\n");
         return;
     }
+    // The result fits, so it is safe to add now.
     printf("Result = %d\n", a + b);
 }
 
 int main(int argc, char **argv) {
     printf("INT_MIN = %d; INT_MAX = %d\n", INT_MIN, INT_MAX);
+    // The unsafe argument runs the original function.
     if (argc > 1 && strcmp(argv[1], "unsafe") == 0) {
         printf("Original function: a = INT_MAX, b = 1\n");
         fflush(stdout);
+        // Both numbers fit on their own, but their sum does not.
         fun1(INT_MAX, 1);
     } else {
         printf("Corrected function:\n");
-        fun1_fixed(INT_MAX, 1);   /* Same test that caused overflow. */
-        fun1_fixed(INT_MIN, -1);  /* Also test the lower limit. */
-        fun1_fixed(20, 30);       /* Ordinary safe addition: 50. */
-        fun1_fixed(-20, -30);     /* Another safe addition: -50. */
+        // Try the same overflow test with the fixed function.
+        fun1_fixed(INT_MAX, 1);
+        // Check what happens below the smallest int.
+        fun1_fixed(INT_MIN, -1);
+        // These two additions should work normally.
+        fun1_fixed(20, 30);
+        fun1_fixed(-20, -30);
     }
     return 0;
 }
 ```
 
-### Original function and chosen values
+### Original function
 
-I chose `a = INT_MAX` and `b = 1`. Both arguments fit in an `int`, but their sum is one larger than the biggest value an `int` can hold. The original function adds them without checking first.
+I chose a as INT_MAX and b as 1. Both numbers fit in an int by themselves. But INT_MAX is already the biggest int, so adding 1 makes the result too big.
 
-![Original addition function with overflow detected.](images/8.png)
+The original function just adds without checking. Running it with the unsafe argument tests that addition. The sanitizer reports signed integer overflow and stops the program.
 
-What the original test actually reported: **[Describe the sanitizer message.]**
+![Addition test](images/8.png)
 
-### Fix and repeated tests
+### What I changed
 
-When `b` is positive, I check whether `a > INT_MAX - b`. When `b` is negative, I check whether `a < INT_MIN - b`. These checks happen before the addition. If a check fails, the function prints an error instead of doing the overflowing addition.
+If b is positive I check whether a is bigger than INT_MAX minus b. If b is negative I check whether a is smaller than INT_MIN minus b. I do this before adding so the check does not wait until after the overflow happened.
 
-I repeated the original test with `INT_MAX` and 1. I also tested `INT_MIN` and negative 1 to check the lower limit. For normal inputs, I used 20 and 30, which should give 50, and negative 20 and negative 30, which should give negative 50.
+If the result would not fit it prints an error and returns. Otherwise it adds the numbers and prints the answer.
 
-![Corrected addition function with overflow and normal inputs.](images/9.png)
+### After the fix
 
-What the corrected tests actually printed: **[Record the error messages and the two valid results.]**
+![Addition after the fix](images/9.png)
+
+The fixed function printed errors for INT_MAX plus 1 and INT_MIN plus negative 1. The normal tests worked. Adding 20 and 30 gave 50, and adding negative 20 and negative 30 gave negative 50.
 
 ## Task 2: Subtraction
 
-### Source code
+### Code
 
 ```c
-/* Part 4, Task 2: Run with "unsafe" to demonstrate the original bug.
-   Run with no argument to test the corrected function. */
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
 
 void fun2(int x, int y) {
     int diff;
-    diff = x - y; /* Original code: signed overflow is undefined behavior. */
+    // Original function subtracts without checking first.
+    diff = x - y;
     printf("Result = %d\n", diff);
 }
 
 void fun2_fixed(int x, int y) {
     printf("x = %d, y = %d: ", x, y);
-    /* Subtracting positive y can go below INT_MIN.
-       Subtracting negative y can go above INT_MAX.
-       Check before carrying out the subtraction. */
+
+    // Subtracting a positive number can go below INT_MIN.
+    // Subtracting a negative number can go above INT_MAX.
     if ((y > 0 && x < INT_MIN + y) ||
         (y < 0 && x > INT_MAX + y)) {
         printf("Error: integer overflow.\n");
         return;
     }
+    // The result fits, so subtract the numbers now.
     printf("Result = %d\n", x - y);
 }
 
 int main(int argc, char **argv) {
     printf("INT_MIN = %d; INT_MAX = %d\n", INT_MIN, INT_MAX);
+    // The unsafe argument runs the original function.
     if (argc > 1 && strcmp(argv[1], "unsafe") == 0) {
         printf("Original function: x = INT_MIN, y = 1\n");
         fflush(stdout);
+        // Taking 1 away from INT_MIN goes below the limit.
         fun2(INT_MIN, 1);
     } else {
         printf("Corrected function:\n");
-        fun2_fixed(INT_MIN, 1);   /* Same test that caused overflow. */
-        fun2_fixed(INT_MAX, -1);  /* Also test the upper limit. */
-        fun2_fixed(30, 20);       /* Ordinary safe subtraction: 10. */
-        fun2_fixed(-20, 30);      /* Another safe subtraction: -50. */
+        // Try the same overflow test with the fixed function.
+        fun2_fixed(INT_MIN, 1);
+        // Taking away negative 1 also checks the upper limit.
+        fun2_fixed(INT_MAX, -1);
+        // These two subtractions should work normally.
+        fun2_fixed(30, 20);
+        fun2_fixed(-20, 30);
     }
     return 0;
 }
 ```
 
-### Original function and chosen values
+### Original function
 
-I chose `x = INT_MIN` and `y = 1`. Both inputs fit in an `int`, but subtracting 1 from the smallest `int` would produce a value below the allowed range. The original function performs this subtraction without checking first.
+I chose x as INT_MIN and y as 1. Both fit in an int by themselves. But INT_MIN is already the smallest int, so subtracting 1 would go below the limit.
 
-![Original subtraction function with overflow detected.](images/10.png)
+![Subtraction before the fix](images/10.png)
 
-Original function tried subtracting 1 from int_min the result would be below smallest allowed integer value. The sanitizer detected the overflow and stopped the program
+The original function tried subtracting 1 from INT_MIN. The sanitizer found signed integer overflow and stopped the program.
 
-### Fix and repeated tests
+### What I changed
 
-When `y` is positive, I check whether `x < INT_MIN + y`. When `y` is negative, I check whether `x > INT_MAX + y`. These checks happen before subtracting. The function prints an error if the result would not fit.
+If y is positive I check whether x is smaller than INT_MIN plus y. If y is negative I check whether x is bigger than INT_MAX plus y. These checks happen before subtracting anything.
 
-I repeated the original test with `INT_MIN` and 1. I also tested `INT_MAX` and negative 1 to check the upper limit. For normal inputs, I used 30 and 20, which should give 10, and negative 20 and 30, which should give negative 50.
+If the result would not fit the function prints an error. Otherwise it subtracts and prints the answer.
 
-![Corrected subtraction function with overflow and normal inputs.](images/11.png)
+### After the fix
 
-The fixed function prints an error for both inputs that would otherwise cause an overflow to occur. The tests worked correctly with 30 - 20 = 10, -20 - 30 = -50. Program finished without any errors.
+![Subtraction after the fix](images/11.png)
+
+The fixed function printed errors for INT_MIN minus 1 and INT_MAX minus negative 1. The normal tests worked. Taking 20 away from 30 gave 10. Taking 30 away from negative 20 gave negative 50. The program finished without a sanitizer error.
