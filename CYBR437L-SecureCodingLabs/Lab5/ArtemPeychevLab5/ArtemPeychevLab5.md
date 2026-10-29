@@ -1,8 +1,8 @@
----
-title: "CYBR 437 Secure Coding: Lab 5"
-author: "Artem Peychev"
-date: "October 28, 2026"
----
+Artem Peychev  
+CYBR437 Secure Coding  
+Lab 5 Assembly Code 
+
+
 
 # Part 1: Assembly to C
 
@@ -119,17 +119,24 @@ My comparison with the handout: **[Write what matched in your actual output.]**
 
 # Part 2: Memory management
 
-I reviewed these two programs without running them, as the instructions require.
+
 
 ## Task 1
 
-The program allocates 32 bytes with `malloc`, but it never frees that memory when allocation succeeds. When `fun` returns, the local pointer is lost, so the program has a memory leak. I would add `free(text_buffer);` before the successful `return 0;`. If `malloc` returns `NULL`, no memory was allocated, so the existing error return is fine.
+The function uses malloc to allocate 32 bytes but never frees that memory.
+When the function ends it loses the pointer to that memory causing a memory leak.
+
+To fix I would add a line to free the text vuffer before it returns a 0.
 
 ## Task 2
 
-The second `printf` reads through `ptr` after `free(ptr)`. This is a use after free. The memory no longer belongs to this allocation, so that read is undefined behavior even if it seems to print 10.
+The second printf uses a pointer after its memory has been already freed.
+It is using the memory hafter it has been freed even if it prints 10 that memory no longer is safe to access.
 
-I would remove the second read or do any needed printing before `free(ptr)`. I would also check whether `malloc` returned `NULL` before assigning `*ptr = 10;`. After freeing the memory, I could set `ptr = NULL` to avoid leaving a dangling pointer, but I still must not dereference it.
+To fix this ussie I would remove the second printf or move it right before
+the free(ptr) line and would check if malloc returned NULL before using a pointer.
+
+
 
 # Part 3: Buffer overflows
 
@@ -160,7 +167,7 @@ I used `normal_city.txt`, containing `Spokane`, and `long_city.txt`, containing 
 
 ![Original city program with short and long input.](images/4.png)
 
-What the original program actually printed: **[Describe the output or error you saw.]**
+The short city printed correctly but the long inputt caused stack smashing detected error and the program stopped. The input was too long for 10 byte city array because scanf did not limit the chars it read.
 
 ### Corrected code
 
@@ -200,7 +207,7 @@ I tested the corrected program with the same two input files.
 
 ![Corrected city program with the same short and long input.](images/5.png)
 
-What the corrected program actually printed: **[Confirm whether both complete names appeared without the previous error.]**
+Both short and long city names printed without crashing this time. The fixed program uses the getline which allows the growing of the buffer when more space is needed so the entire output will fit.
 
 ## Task 2: Copying an array
 
@@ -239,7 +246,7 @@ The function never checks how much space the destination has. My test destinatio
 
 ![Original copying function and its detected overflow.](images/6.png)
 
-What the test actually reported: **[Describe the error and the line it identifies.]**
+The address sanitizer detected a write outside the destination array and only indexes 0 to 4 but it is actually copying four values starting with index 3 trying to write at index 5 and 6 so the program stopped when the overflow was detected.
 
 ### Corrected code and test main
 
@@ -307,7 +314,7 @@ I used the same source, starting position 3, copy count 4, and original destinat
 
 ![Corrected copying function using the same test values.](images/7.png)
 
-What the corrected program actually printed: **[Record the new capacity, returned position, and array values.]**
+Fixed program increases the array size from 5 to correct size of 7 and copied all four values returning to position number 7.
 
 # Part 4: Integer overflows
 
@@ -431,7 +438,7 @@ I chose `x = INT_MIN` and `y = 1`. Both inputs fit in an `int`, but subtracting 
 
 ![Original subtraction function with overflow detected.](images/10.png)
 
-What the original test actually reported: **[Describe the sanitizer message.]**
+Original function tried subtracting 1 from int_min the result would be below smallest allowed integer value. The sanitizer detected the overflow and stopped the program
 
 ### Fix and repeated tests
 
@@ -441,4 +448,4 @@ I repeated the original test with `INT_MIN` and 1. I also tested `INT_MAX` and n
 
 ![Corrected subtraction function with overflow and normal inputs.](images/11.png)
 
-What the corrected tests actually printed: **[Record the error messages and the two valid results.]**
+The fixed function prints an error for both inputs that would otherwise cause an overflow to occur. The tests worked correctly with 30 - 20 = 10, -20 - 30 = -50. Program finished without any errors.
