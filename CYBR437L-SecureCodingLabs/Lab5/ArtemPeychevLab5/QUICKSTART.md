@@ -70,6 +70,11 @@ Fill the three assembly comparison placeholders in your Markdown file using what
 
 Read the two Part 2 explanations in the template. Task 1 is a memory leak. Task 2 is a use after free and also needs a malloc failure check. No screenshots or extra C files are required for Part 2. Do not run the supplied Part 2 programs.
 
+
+
+
+
+
 ## 4. Part 3, Task 1: City overflow
 
 ### Screenshot 4: Original version
