@@ -175,7 +175,7 @@ After determining the offset required to overwrite the return address, again I u
 So then I verified access_vault located at address 0x80491c6 which is responsible for validating the supplied params and then revealing the flag.
 
 Knowing the buffer location, return address offset which is 44 bytes, and address of access_vault, I modified the exploit.py payload to overflow the buffer then overwrite the return address redirecting the execution to the function that I want which is access_vault() placing the required values on the stack os the validation checks inside the function succeed.
-
+ss
 Screenshot below shows the correct payload and successful exploitation of the overflow granting access and reading the flag.
 
 
