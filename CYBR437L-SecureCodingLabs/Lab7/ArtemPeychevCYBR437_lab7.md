@@ -25,8 +25,7 @@ After running pwndbg, I wanted to what functions are inside task1. I discovered 
 0x0804927c  main
 ```
 
-
-safdas  
+  
 
 ![Command: info functions](images/1_info_functions.png)
 
